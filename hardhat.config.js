@@ -1,11 +1,9 @@
-require('hardhat-contract-sizer');
-require("@nomicfoundation/hardhat-toolbox");
-require('@openzeppelin/hardhat-upgrades');
-require("@nomicfoundation/hardhat-ledger");
-require("hardhat-gas-reporter");
+require("@matterlabs/hardhat-zksync-deploy");
+require("@matterlabs/hardhat-zksync-solc");
+require("@matterlabs/hardhat-zksync-upgradable");
 require("dotenv").config();
-require("@nomiclabs/hardhat-etherscan");
 require('./tasks/genie.js');
+
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -18,6 +16,10 @@ module.exports = {
       }
     }
   }, 
+  zksolc: {
+    version: "latest",
+    settings: {},
+  },
   gasReporter: {
     enabled: (process.env.GAS_REPORT) ? true : false,
     currency: 'USD',
@@ -55,42 +57,12 @@ module.exports = {
     goerli: {
       url: `${process.env.ALCHEMY_GOERLI_URL}`,
       accounts: [`${process.env.MY_PRIVATE_KEY}`],
+      zksync: false
     },
-    scrollsepolia: {
-      url: 'https://sepolia-rpc.scroll.io',
-      accounts: [`${process.env.MY_PRIVATE_KEY}`],
-    },
-    basegoerli: {
-      url: 'https://goerli.base.org',
-      gasPrice: 1000000000,
-      accounts: [`${process.env.MY_PRIVATE_KEY}`],
-    },
-    base: {
-      url: 'https://developer-access-mainnet.base.org',
-      gasPrice: 1000000000,
-      ledgerAccounts: [
-        '0xB617dFa5Cf63C55F5E3f351A70488cE34EDcc9C6'
-      ]
-    },
-    mumbai: {
-      url: `${process.env.ALCHEMY_MUMBAI_URL}`,
-      accounts: [`${process.env.MY_PRIVATE_KEY}`],
-    },
-    mainnet: {
-      url: `${process.env.ALCHEMY_MAINNET_URL}`,
-      accounts: [`${process.env.MY_MAINNET_PRIVATE_KEY}`],
-    },
-    devnet: {
-      url: 'http://127.0.0.1:1234/rpc/v1',
-      accounts: [`${process.env.MY_PRIVATE_KEY}`],
-    },
-    calibration: {
-      url: 'https://api.calibration.node.glif.io/rpc/v1',
-      accounts: [`${process.env.MY_PRIVATE_KEY}`],
-    },
-    filecoin: {
-      url: 'https://api.node.glif.io',
-      accounts: [`${process.env.MY_FILECOIN_KEY}`],
+    zkSyncTestnet: {
+      url: "https://testnet.era.zksync.dev",
+      ethNetwork: "goerli", // or a Goerli RPC endpoint from Infura/Alchemy/Chainstack etc.
+      zksync: true,
     },
   }
 };

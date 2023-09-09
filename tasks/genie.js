@@ -1,3 +1,7 @@
+const { Deployer } = require("@matterlabs/hardhat-zksync-deploy");
+const { Wallet } = require("zksync-web3");
+const { ethers } = require('ethers');
+
 ///////////////////////////////////////////
 // Genie 
 //
@@ -40,10 +44,11 @@ const blue   = (s) => '\x1b[34m' + s + '\x1b[0m';
 // parameters are defined in the contracts.
 ///////////////////////////////////////////
 const getContractInitializationDependencies = async function(alias) {
-  const contract = await ethers.getContractFactory(alias);
-  const chainId = await contract.signer.getChainId();
+  const owner = await patchOwner();
+  const contract = await owner.loadArtifact(alias);
+  const chainId = 280; // await contract.signer.getChainId();
   var dependencies = [];
-  for (pt of contract.interface.fragments.filter(f => f.type === 'function' && f.name === 'initialize')[0].inputs) {
+  for (pt of contract.abi.filter(f => f.type === 'function' && f.name === 'initialize')[0].inputs) {
     var contractDependency = pt.name.replace(/_/g,'');
     var contractAddress  = LocksmithRegistry.getContractAddress(chainId, contractDependency);
     var contractCodeHash = LocksmithRegistry.getContractCodeHash(chainId, contractDependency);
@@ -81,38 +86,23 @@ const sortDependencies = async function(alias) {
 // https://github.com/NomicFoundation/hardhat/issues/3418
 ///////////////////////////////////////////
 const patchOwner = async function() {
-  const signers = await hre.ethers.getSigners();
-
-  // determine if its a ledger configuration or not?
-  // TODO: this is a bit of a hack it seems
-  const signer = signers.length > 20 ? signers[20] : signers[0];
-
-  // for networks that absolutely require type 2 transactions, avoid
-  // the hardhat signer by creating a wallet.
-  if ((await signer.getChainId()).toString().match(/3141/)) {
-    return new ethers.Wallet(process.env.MY_PRIVATE_KEY, ethers.provider);
-  } else if ((await signer.getChainId()).toString().match(/314/)) {
-    return new ethers.Wallet(process.env.MY_FILECOIN_KEY, ethers.provider);
-  }
-
-  // for networks that are backwards compatible, allow
-  // hardhat to do unenveloped transactions at the potential
-  // of overpaying for gas
-  return signer; 
+  const zkWallet = new Wallet(process.env.MY_PRIVATE_KEY)
+  const deployer = new Deployer(hre, zkWallet);
+  return deployer; 
 }
 
 task("show", "Show the state of the current genie deployment")
   .setAction(async (taskArgs) => {
     const owner = await patchOwner(); 
-    const chainId = await owner.getChainId();
-    const balance = await owner.provider.getBalance(owner.address);
-    const gasPrice = await owner.provider.getGasPrice();
+    const chainId = 280; 
+    const balance = await owner.zkWallet.getBalance(owner.address);
+    const gasPrice = await owner.zkWallet.getGasPrice();
 
     console.log(greenText, '\n==== GENIE, SHOW! ====\n');
     console.log(JSON.stringify(taskArgs, null, 2));
     console.log(greenText, "\n=== SIGNER INFO ===\n");
     console.log(" Signer Network Chain ID: " + chainId);
-    console.log(" Signer Wallet Address: " + owner.address);
+    console.log(" Signer Wallet Address: " + owner.zkWallet.address);
     console.log(" Signer Balance: " + ethers.utils.formatEther(balance));
     console.log(greenText, "\n=== NETWORK CONDITIONS ===\n");
     console.log( " Gas Price: " + ethers.utils.formatUnits(gasPrice, "gwei"));
@@ -123,7 +113,7 @@ task("show", "Show the state of the current genie deployment")
     
     console.log(greenText, "\n=== CURRENT ===\n");
     for(const c of LocksmithRegistry.getContractList() ) {
-      const contract = await ethers.getContractFactory(c);
+      const contract = await owner.loadArtifact(c);
       const currentAddress  = LocksmithRegistry.getContractAddress(chainId, c);
       const currentCodeHash = LocksmithRegistry.getContractCodeHash(chainId, c);
       const localCodeHash = ethers.utils.keccak256(contract.bytecode);
@@ -166,12 +156,12 @@ task("show", "Show the state of the current genie deployment")
     var keyVaultAddress = LocksmithRegistry.getContractAddress(chainId, 'KeyVault');
     var locksmithAddress = LocksmithRegistry.getContractAddress(chainId, 'Locksmith');
 
-    var keyVaultContract = await ethers.getContractFactory('KeyVault');
-    var locksmithContract = await ethers.getContractFactory('Locksmith');
+    var keyVaultArtifact = await owner.loadArtifact('KeyVault');
+    var keyVaultContract = new ethers.Contract(keyVaultAddress, keyVaultArtifact.abi, owner.zkWallet);
 
     try {
       if (keyVaultAddress !== null && locksmithAddress !== null &&
-          ((await keyVaultContract.attach(keyVaultAddress).locksmith()) === locksmithAddress)) {
+          ((await keyVaultContract.locksmith()) === locksmithAddress)) {
         console.log(greenText, "[✓] KeyVault respects *the* Locksmith");
       } else {
         console.log(redText, "[ ] KeyVault respects *the* Locksmith");
@@ -231,8 +221,8 @@ task("deploy", "Deploy a specific contract generating a new address for it.")
     // hardhat local defaults, or using alchemy and testnet or production
     // credentials via dotenv (.env) and hardhat.config.js
     const owner = await patchOwner();
-    const chainId = await owner.getChainId();
-    const balance = await owner.provider.getBalance(owner.address);
+    const chainId = 280; //await owner.getChainId();
+    const balance = await owner.zkWallet.getBalance(owner.address);
 
     // do a sanity check.
     if (taskArgs.force && taskArgs.upgrade) {
@@ -248,14 +238,14 @@ task("deploy", "Deploy a specific contract generating a new address for it.")
     console.log(" Signer Balance: " + ethers.utils.formatEther(balance));
 
     // Create the signer for the mnemonic, connected to the provider with hardcoded fee data
-    const contract = await ethers.getContractFactory(taskArgs['contract'], owner);
+    const contract = await owner.loadArtifact(taskArgs['contract'], owner);
     
     console.log(greenText, "\n=== CONTRACT INFO ===\n");
     console.log(" Input alias: " + taskArgs['contract']);
-    console.log(" Factory Signer Chain ID: " + await contract.signer.getChainId());
-    console.log(" Factory Signer Address:" + await contract.signer.getAddress());
+    console.log(" Factory Signer Chain ID: " + 280); 
+    console.log(" Factory Signer Address:" + owner.address);
 
-    const gasPrice = await owner.provider.getGasPrice();
+    const gasPrice = await owner.zkWallet.getGasPrice();
     console.log(greenText, "\n=== NETWORK CONDITIONS ===\n");
     console.log( " Gas Price: " + ethers.utils.formatUnits(gasPrice, "gwei"));
 
@@ -333,7 +323,7 @@ task("deploy", "Deploy a specific contract generating a new address for it.")
 
       console.log("Calling upgrades.upgradeProxy(" + currentAddress + 
         ", [contract:" + taskArgs['contract'] + "])"); 
-      const deployment = await upgrades.upgradeProxy(currentAddress, contract, {
+      const deployment = await hre.zkUpgrades.upgradeProxy(currentAddress, contract, {
         timeout: 180000,
       });
       LocksmithRegistry.saveContractCodeHash(chainId, taskArgs['contract'], localCodeHash);
@@ -343,8 +333,8 @@ task("deploy", "Deploy a specific contract generating a new address for it.")
       // nah, just a standard deloyment. forced or otherwise.
       console.log("Calling upgrades.deployProxy with #initialize([" + preparedArguments + "])"); 
       try {
-        const deployment = await upgrades.deployProxy(contract, preparedArguments, {
-          timeout: 180000
+        const deployment = await hre.zkUpgrades.deployProxy(owner.zkWallet, contract, preparedArguments, {
+          initializer: 'initialize',
         });
         await deployment.deployed();
       
@@ -363,7 +353,7 @@ task("deploy", "Deploy a specific contract generating a new address for it.")
 task("respect", "Make the current registry's key vault respect the current locksmith.")
   .setAction(async (taskArgs) => {
     const owner = await patchOwner(); 
-    const chainId = await owner.getChainId();
+    const chainId = 280; // await owner.getChainId();
 
     console.log(greenText, '\n==== GENIE, RESPECT! ====\n');
     console.log(JSON.stringify(taskArgs, null, 2));
@@ -383,9 +373,10 @@ task("respect", "Make the current registry's key vault respect the current locks
     }
 
     console.log(greenText, "\n=== Calling setRespectedLocksmith... ===\n");
-    var keyVaultContract = await ethers.getContractFactory('KeyVault');
+    var keyVaultArtifact = await owner.loadArtifact('KeyVault');
+    var keyVaultContract = new ethers.Contract(keyVaultAddress, keyVaultArtifact.abi, owner.zkWallet);
     
-    var respectAddress = await keyVaultContract.attach(keyVaultAddress).locksmith(); 
+    var respectAddress = await keyVaultContract.locksmith(); 
     console.log(" The current respect address is: " + respectAddress);
 
     if(respectAddress === locksmithAddress) {
@@ -395,8 +386,6 @@ task("respect", "Make the current registry's key vault respect the current locks
 
     try {
       var response = await keyVaultContract
-        .attach(keyVaultAddress)
-        .connect(owner)
         .setRespectedLocksmith(locksmithAddress);
 
       console.log("\nIt seems it was successful!");

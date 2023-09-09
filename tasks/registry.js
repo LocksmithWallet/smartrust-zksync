@@ -1,4 +1,7 @@
 const fs = require('fs');
+const { Wallet } = require("zksync-web3");
+const { Deployer } = require("@matterlabs/hardhat-zksync-deploy");
+const { ethers } = require("ethers");
 
 LocksmithRegistry = (function() {
   const CONTRACTS = [ 
@@ -20,6 +23,21 @@ LocksmithRegistry = (function() {
     'TrustRecoveryCenter',
     'RecoveryPolicyCreator',
   ];
+
+///////////////////////////////////////////
+// patchOwner
+//
+// This is needed because hardhat doesn't always use EIP 1559
+// when using the default JsonRPCSigner, and doesn't necessarily
+// support the right over-rides in hardhat.config.js.
+//
+// https://github.com/NomicFoundation/hardhat/issues/3418
+///////////////////////////////////////////
+const patchOwner = async function() {
+  const zkWallet = new Wallet(process.env.MY_PRIVATE_KEY)
+  const deployer = new Deployer(hre, zkWallet);
+  return deployer;
+}
 
   /////////////////////////////////////////////
   // getNetworkRegistryFileName
@@ -77,16 +95,18 @@ LocksmithRegistry = (function() {
     // of the given contract alias.
     /////////////////////////////////////////////
     getDeployedDependencyAddress: async function(chainId, alias, dependency) {
+      var owner = await patchOwner();
       var address = LocksmithRegistry.getContractAddress(chainId, alias);
-      var contract = await ethers.getContractFactory(alias);
+      var artifact = await owner.loadArtifact(alias);
 
       // this is a very naughty piece of code, that assumes
       // there is a public member that is lower-camelized for
       // the contract dependency.
       // note: this has already tripped me up once with the event log dependency
-      var method = dependency.charAt(0).toLowerCase() + dependency.slice(1);
       try { 
-        return address !== null ? await contract.attach(address)[method]() : null;
+        var contract = new ethers.Contract(address, artifact.abi, owner.zkWallet);
+        var method = dependency.charAt(0).toLowerCase() + dependency.slice(1);
+        return address !== null ? await contract[method]() : null;
       } catch (err) {
         return null;
       }
