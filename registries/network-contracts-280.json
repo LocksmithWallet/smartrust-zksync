@@ -56,16 +56,16 @@
     "codeHash": "0x516550d528e93a4e3583401e5cf1e147324a0ce93515166e888f8fea160494b3"
   },
   "KeyAddressFactory": {
-    "address": "0xE3dC6176988F264C5bbbd0E222Bc9e7aB5FA22D0",
-    "codeHash": "0xbe73542262aebfa761e7954ff6a375d27519216bcb3e2024a6f6871a1a939c1a"
+    "address": "0x738F204c81283Dc412FD2d125031FE3EdCcc7F28",
+    "codeHash": "0x85b774a8c85bf979230801bfd9a6c74b4445e6fa1ec6492e927c921faad43a5c"
   },
   "MegaKeyCreator": {
-    "address": "0xa6018999B71e823BcA2d2988838Ef5bc0063E18a",
+    "address": "0xFd0DCE2C74a72c784cd672ecf139172DF08dF4FB",
     "codeHash": "0x87f98b06f41db83e64a64eddbf2f00edaba4bcd8bf8c279bbe20446c9b48e561"
   },
   "TrustCreator": {
-    "address": "0x577358030A71b047D8a0862fe144686103e60Fbc",
-    "codeHash": "0x308550deb27eebb293d925ed5bd8f045a7821f5bbf345a0983221fb7de2d8682"
+    "address": "0x5dA1C9c1A88c7014eCAFd9DBE7C0DbE1B0518691",
+    "codeHash": "0x1211775d47ce9a92014cb79c90b5a6033606daf79181036f9596d203359489b0"
   },
   "TrustRecoveryCenter": {
     "address": "0xEb9E07084721551e474e0D50B25F77F7a56483A0",

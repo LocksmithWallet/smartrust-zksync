@@ -123,7 +123,13 @@ contract KeyAddressFactory is ERC1155Holder, Initializable, OwnableUpgradeable, 
         InboxRequest memory request = abi.decode(data, (InboxRequest)); 
 
         // deploy the implementation
-        address inbox = address(new VirtualKeyAddress());    
+        address addr;
+        bytes memory bytecode = type(VirtualKeyAddress).creationCode;
+        assembly {
+            addr := create(0, add(bytecode, 0x20), mload(bytecode))
+        }
+        address inbox = address(addr);
+        require(inbox != address(0), 'NULL_ADDRESS');
 
         // deploy the proxy, and call the initialize method through it
         ERC1967Proxy proxy = new ERC1967Proxy(inbox, 

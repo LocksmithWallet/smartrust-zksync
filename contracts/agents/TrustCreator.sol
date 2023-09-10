@@ -155,6 +155,8 @@ contract TrustCreator is ERC1155Holder, Initializable, OwnableUpgradeable, UUPSU
         (uint256 trustId, uint256 rootKeyId,) = createDefaultTrust(trustName,
             keyReceivers, keyAliases);
 
+        require(trustName == bytes32(0), "1");
+        
         // finalize the notary here
         for(uint256 x = 0; x < scribes.length; x++) {
             notary.setTrustedLedgerRole(rootKeyId, 1, ledger, scribes[x], true, scribeAliases[x]); 
@@ -162,16 +164,16 @@ contract TrustCreator is ERC1155Holder, Initializable, OwnableUpgradeable, UUPSU
         for(uint256 x = 0; x < dispatchers.length; x++) {
             notary.setTrustedLedgerRole(rootKeyId, 2, trustEventLog, dispatchers[x], true, dispatcherAliases[x]); 
         }
-
+        
         // copy the master key into a locker
         locksmith.copyKey(rootKeyId, rootKeyId, keyLocker, false);
-
+        
         // soulbind the key to the receipient
         locksmith.soulbindKey(rootKeyId, msg.sender, rootKeyId, 1);
-
+        
         // send the key to the message sender
         IERC1155(keyVault).safeTransferFrom(address(this), msg.sender, rootKeyId, 1, '');
-
+        
         // return the trustID and the rootKeyId
         return (trustId, rootKeyId);
     }
@@ -207,7 +209,7 @@ contract TrustCreator is ERC1155Holder, Initializable, OwnableUpgradeable, UUPSU
         
         // create the trust
         (uint256 trustId, uint256 rootKeyId) = locksmith.createTrustAndRootKey(trustName, address(this));
-
+        
         // make sure we have the trust key
         assert(IERC1155(keyVault).balanceOf(address(this), rootKeyId) > 0);
 
@@ -221,7 +223,7 @@ contract TrustCreator is ERC1155Holder, Initializable, OwnableUpgradeable, UUPSU
             // create the inbox without copying it
             IERC1155(keyVault).safeTransferFrom(address(this), keyAddressFactory, rootKeyId, 1, 
               abi.encode(keyIDs[x], etherVault, false));
-
+            
             // get the inbox address
             address inbox = postOffice.getKeyInbox(keyIDs[x]);
 
